@@ -5,11 +5,6 @@ import { uploadToCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js"
 
 const registerUser = asyncHandler(async (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: "user register successfully",
-  });
-
   //get data from request body
   // get user details from frontend
   // validate user details
@@ -24,29 +19,29 @@ const registerUser = asyncHandler(async (req, res) => {
   // return response to frontend with the user details and access token and refresh token
 
   // 1 get user details from the request body
-  const { name, email, username, password } = req.body;
-  console.log(name, email, username, password);
+  const { fullName, email,  password } = req.body;
+  console.log(fullName, email, password);
 
   // if(fullName === ""){
   // throw new ApiError(400, 'fullName is required')
   // }
 
   if (
-    [fullname, email, username, password].some((field) => field?.trim() === "")
+    [fullName, email, password].some((field) => field?.trim() === "")
   ) {
     throw new ApiError(400, "All fields are required");
   }
 
-  const existedUser = User.findOne({
-    $or: [{ username }, { email }],
+  const existedUser = await User.findOne({
+    $or: [{ fullName }, { email }],
   });
 
   if (existedUser) {
-    throw new ApiError(409, "User with username or Password already existed");
+    throw new ApiError(409, "User with fullName or Password already existed");
   }
 
-  const avatarLocalPath = req.files?.avatar[0]?.path;
-  const coverLocalPath = req.files?.coverImage[0]?.path;
+const avatarLocalPath = req.files?.avatar?.[0]?.path;
+const coverLocalPath = req.files?.coverImage?.[0]?.path;
 
   if (!avatarLocalPath) {
     throw new ApiError(400, "Avatar files is required ");
@@ -61,11 +56,10 @@ const registerUser = asyncHandler(async (req, res) => {
 
   const user = await User.create({
     fullName,
-    avatar: avatar.Url,
-    coverImageL: coverImage || "",
+    avatar,
+    coverImage: coverImage || "",
     email,
     password,
-    email,
   });
 
   const createdUser = await User.findById(user._id).select(
@@ -79,7 +73,38 @@ const registerUser = asyncHandler(async (req, res) => {
 return res.status(201).json(
   new ApiResponse(200, createdUser, "User registered successfully")
 )
-  
+ 
 });
 
 export { registerUser };
+
+
+
+
+// get all users 
+const getAllUsers = asyncHandler(async(req, res)=>{
+const users = await User.find().select("-password -refreshToken");
+if (!users.length) {
+  throw new ApiError(404, "No users found");
+}
+return res.status(200).json(
+  new ApiResponse(200, users, "users fetched successfully" )
+);
+});
+
+
+// this is for pagination -code get query form api Url 
+// const getAllUsers = asyncHandler(async (req, res) => {
+//   const { page = 1, limit = 10 } = req.query;
+
+//   const users = await User.find()
+//     .skip((page - 1) * limit)
+//     .limit(Number(limit))
+//     .select("-password -refreshToken");
+
+//   return res.status(200).json(
+//     new ApiResponse(200, users, "Users fetched successfully")
+//   );
+// });
+
+export { getAllUsers }

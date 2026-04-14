@@ -1,5 +1,5 @@
 import express from 'express';
-import { registerUser} from '../controllers/user.controllers.js';
+import { registerUser, getAllUsers} from '../controllers/user.controllers.js';
 import { upload } from '../middlewares/multer.middlewares.js'
 
 
@@ -18,8 +18,9 @@ router.route('/register').post(
     ]),
     registerUser
 );
-router.route('/register').get(registerUser);
 
 
+// get all users 
+router.route('/get-all-users').get(getAllUsers)
 
 export default router;
