@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 
+
 const userSchema = new mongoose.Schema(
   {
     name: {
@@ -66,4 +67,6 @@ userSchema.methods.generateRefreshToken = function () {
   });
 };
 
+
 export const User = mongoose.model("user", userSchema);
+ 
