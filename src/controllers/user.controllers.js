@@ -4,8 +4,7 @@ import { User } from "../models/user.models.js";
 import { uploadToCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 
-
-// generate Access and refresh Tokens methods 
+// generate Access and refresh Tokens methods
 const generateAccessAndRefreshTokens = async (userId) => {
   try {
     const user = await User.findById(userId);
@@ -24,8 +23,7 @@ const generateAccessAndRefreshTokens = async (userId) => {
   }
 };
 
-
-// user register here 
+// user register here
 const registerUser = asyncHandler(async (req, res) => {
   //get data from request body
   // get user details from frontend
@@ -95,8 +93,6 @@ const registerUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, createdUser, "User registered successfully"));
 });
 
-export { registerUser };
-
 // get all users
 const getAllUsers = asyncHandler(async (req, res) => {
   const users = await User.find().select("-password -refreshToken");
@@ -107,9 +103,6 @@ const getAllUsers = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, users, "users fetched successfully"));
 });
-
-export { getAllUsers };
-
 
 // user login or not
 const loginUser = asyncHandler(async (req, res) => {
@@ -169,34 +162,33 @@ const loginUser = asyncHandler(async (req, res) => {
     );
 });
 
-export {loginUser}
-
-
-// logout function 
-  const logoutUser = asyncHandler(async (req, res) => {
-    await User.findByIdAndUpdate(
-      req.user?._id,
-      {
-        $set: {
-          refreshToken: undefined,
-        },
+// logout function
+const logoutUser = asyncHandler(async (req, res) => {
+  await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $set: {
+        refreshToken: undefined,
       },
-      {
-        new: true,
-      }
-    );
+    },
+    {
+      new: true,
+    }
+  );
 
-    const options = {
-      httpOnly: true,
-      secure: true,
-    };
+  const options = {
+    httpOnly: true,
+    secure: true,
+  };
 
-    return res
-      .status(200)
-      .clearCookie("accessToken", options)
-      .clearCookie("refreshToken", options)
-      .json(new ApiError(200,{}, "User Logged Out"));
-  });
+  return res
+    .status(200)
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshToken", options)
+    .json(new ApiError(200, {}, "User Logged Out"));
+});
 
-  export { logoutUser };
+// 
 
+// export all the functions
+export { registerUser, getAllUsers, loginUser, logoutUser };
