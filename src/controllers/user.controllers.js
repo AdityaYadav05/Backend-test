@@ -315,6 +315,141 @@ const updateUserAvatarImage = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, user, "User avatar image update successfully"));
 });
 
+// get user channel details
+const getUserChannelDetails = asyncHandler(async (req, res) => {
+  const { username } = req.params;
+
+  if (!username.trim()) {
+    throw new ApiError(400, "username is required");
+  }
+
+  // we will get the user details based on the username and also get the subscriber count and subscription count and also check if the logged in user is subscribed to that channel or not
+  // we will use aggregation pipeline to get the user details and also get the subscriber count and subscription count and also check if the logged in user is subscribed to that channel or not
+  const channelDetails = await User.aggregate([
+    {
+      $match: {
+        username: username?.toLowerCase(),
+      },
+    },
+    {
+      $lookup: {
+        from: "subscribers", // collection name in db
+        localField: "_id",
+        foreignField: "channel",
+        as: "subscribers",
+      },
+    },
+    {
+      $Lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "subscriber",
+        as: "subscriptionsTo",
+      },
+    },
+    {
+      $addFields: {
+        subscribersCount: {
+          $size: "$subscribers",
+        },
+        channelSubscriptionsCount: {
+          $size: "$subscriptionsTo",
+        },
+        isSubscribed: {
+          $cond: {
+            if: {
+              $in: [
+                new mongoose.Types.ObjectId(req.user?._id),
+                "$subscribers.subscriber",
+              ],
+            },
+            then: true,
+            else: false,
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        fullName: 1,
+        email: 1,
+        avatar: 1,
+        coverImage: 1,
+        subscribersCount: 1,
+        channelSubscriptionsCount: 1,
+        isSubscribed: 1,
+      },
+    },
+  ]);
+
+  if (!channelDetails.length) {
+    throw new ApiError(404, "Channel not found");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        channelDetails[0],
+        "Channel details fetched successfully"
+      )
+    );
+});
+
+// get watch history of the user
+// we will get the watch history of the user based on the user id and also populate the video details in the watch history
+// we will use aggregation pipeline to get the watch history of the user and also populate the video details in the watch history
+// we will sort the watch history based on the createdAt field in descending order to get the latest watched videos at the top
+
+const getWatchHistory = asyncHandler(async (req, res) => {
+  const watchHistory = await User.aggregate([
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId(req.user?._id),
+      },
+    },
+    {
+      $lookup: {
+        from: "videos",
+        localField: "watchHistory",
+        foreignField: "_id",
+        as: "watchHistoryDetails",
+        pipeline: [
+          {
+            $lookup: {
+              from: "users",
+              localField: "owner",
+              foreignField: "_id",
+              as: "ownerDetails",
+              pipeline: [
+                {
+                  $project: {
+                    fullName: 1,
+                    avatar: 1,
+                  },
+                },
+              ],
+            },
+            
+          },
+        ],
+      },
+    },
+    {
+      $addFields:{
+        ownerDetails : {
+          $first : "$ownerDetails"
+      }
+    }
+    },
+  ]);
+
+  return res 
+    .status(200)
+    .json(new ApiError(200, watchHistory[0]?.watchHistoryDetails || [], "watch history fetched successfully"));
+});
+
 // export all the functions
 export {
   registerUser,
@@ -326,4 +461,6 @@ export {
   updateUserDetails,
   updateUserCoverImage,
   updateUserAvatarImage,
+  getUserChannelDetails,
+  getWatchHistory,
 };
