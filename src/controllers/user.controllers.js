@@ -431,23 +431,28 @@ const getWatchHistory = asyncHandler(async (req, res) => {
                 },
               ],
             },
-            
           },
         ],
       },
     },
     {
-      $addFields:{
-        ownerDetails : {
-          $first : "$ownerDetails"
-      }
-    }
+      $addFields: {
+        ownerDetails: {
+          $first: "$ownerDetails",
+        },
+      },
     },
   ]);
 
-  return res 
+  return res
     .status(200)
-    .json(new ApiError(200, watchHistory[0]?.watchHistoryDetails || [], "watch history fetched successfully"));
+    .json(
+      new ApiError(
+        200,
+        watchHistory[0]?.watchHistoryDetails || [],
+        "watch history fetched successfully"
+      )
+    );
 });
 
 // export all the functions
