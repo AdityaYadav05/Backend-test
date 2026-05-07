@@ -161,7 +161,7 @@ const loginUser = asyncHandler(async (req, res) => {
       )
     );
 });
-
+  
 // logout function
 const logoutUser = asyncHandler(async (req, res) => {
   await User.findByIdAndUpdate(
