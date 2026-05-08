@@ -3,6 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.models.js";
 import { uploadToCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import jwt from "jsonwebtoken";
 
 // generate Access and refresh Tokens methods
 const generateAccessAndRefreshTokens = async (userId) => {
@@ -22,6 +23,69 @@ const generateAccessAndRefreshTokens = async (userId) => {
     );
   }
 };
+
+// refresh token function
+
+// refresh access token controller
+const refreshAccessToken = asyncHandler(async (req, res) => {
+  // get refresh token from cookies or body
+  const incomingRefreshToken =
+    req.cookies?.refreshToken || req.body?.refreshToken;
+
+  if (!incomingRefreshToken) {
+    throw new ApiError(401, "Unauthorized request");
+  }
+
+  try {
+    // verify refresh token
+    const decodedToken = jwt.verify(
+      incomingRefreshToken,
+      process.env.REFRESH_TOKEN_SECRET
+    );
+
+    // find user
+    const user = await User.findById(decodedToken?._id);
+
+    if (!user) {
+      throw new ApiError(401, "Invalid refresh token");
+    }
+
+    // compare token with DB token
+    if (incomingRefreshToken !== user?.refreshToken) {
+      throw new ApiError(401, "Refresh token is expired or used");
+    }
+
+    // generate new tokens
+    const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
+      user._id
+    );
+
+    // cookie options
+    const options = {
+      httpOnly: true,
+      secure: true,
+      sameSite : "strict",
+    };
+
+    // send response
+    return res
+      .status(200)
+      .cookie("accessToken", accessToken, options)
+      .cookie("refreshToken", refreshToken, options)
+      .json(
+        new ApiResponse(
+          200,
+          {
+            accessToken,
+            refreshToken,
+          },
+          "Access token refreshed successfully"
+        )
+      );
+  } catch (error) {
+    throw new ApiError(401, error?.message || "Invalid refresh token");
+  }
+});
 
 // user register here
 const registerUser = asyncHandler(async (req, res) => {
@@ -74,8 +138,8 @@ const registerUser = asyncHandler(async (req, res) => {
 
   const user = await User.create({
     fullName,
-    avatar,
-    coverImage: coverImage || "",
+    avatar: avatar.url,
+    coverImage: coverImage?.url || "",
     email,
     password,
   });
@@ -143,6 +207,7 @@ const loginUser = asyncHandler(async (req, res) => {
   const options = {
     httpOnly: true,
     secure: true,
+    sameSite: "strict",
   };
 
   return res
@@ -161,7 +226,7 @@ const loginUser = asyncHandler(async (req, res) => {
       )
     );
 });
-  
+
 // logout function
 const logoutUser = asyncHandler(async (req, res) => {
   await User.findByIdAndUpdate(
@@ -185,7 +250,7 @@ const logoutUser = asyncHandler(async (req, res) => {
     .status(200)
     .clearCookie("accessToken", options)
     .clearCookie("refreshToken", options)
-    .json(new ApiError(200, {}, "User Logged Out"));
+    .json(new ApiResponse(200, {}, "User Logged Out"));
 });
 
 // change User Password
@@ -457,6 +522,7 @@ const getWatchHistory = asyncHandler(async (req, res) => {
 
 // export all the functions
 export {
+  refreshAccessToken,
   registerUser,
   getAllUsers,
   loginUser,

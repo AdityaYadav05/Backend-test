@@ -1,5 +1,6 @@
 import express from "express";
 import {
+  refreshAccessToken,
   registerUser,
   getAllUsers,
   loginUser,
@@ -31,7 +32,8 @@ router.route("/register").post(
   registerUser
 );
 
-// get all users
+router.route("/refresh-access-token").post(refreshAccessToken);
+
 router.route("/get-all-users").get(getAllUsers);
 
 router.route("/login").post(loginUser);
